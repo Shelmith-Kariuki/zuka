@@ -1,0 +1,133 @@
+---
+title: <center><strong>Statistical Tests</strong></center>
+subtitle: <center><strong><h2>Two sample independent t-tests</h2></strong></center>
+author: <center><strong><h4>[Shelmith Nyagathiri Kariuki](https://github.com/Shelmith-Kariuki)</h4></strong></center>
+output:
+    html_document:
+    toc: true
+    toc_depth: 6
+    number_sections: true
+    fig_width: 16
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+path<-"/home/shelmith/Documents/Github/zuka/Resources/T-Tests/"
+```
+
+
+<p style="text-align:justify;"> In the year 2009, each student in a random sample of 6 Bsc. Statistics students in xyz University was asked about their salary package after they completed graduation. In the year 2015, the same question was asked to another sample of 6 students, graduating from the same course.
+Test to see whether the mean salary offered after graduation has changed over the past 6
+years, 95% level of significance </p> 
+<br><center>batch2009 : 567, 759, 1029, 400, 998, 936</center>
+<br><center>batch2015 : 820, 960, 700, 545, 769, 1001 </center><br>
+
+<h5>Calculations by hand</h5>
+```{r ,comment=NA}
+
+knitr::include_graphics(paste0(path,"Example1ManualPage1.jpg"))
+knitr::include_graphics(paste0(path,"Example1ManualPage1.jpg"))
+```
+
+
+<h5>Execution in R</h5>
+
+```{r}
+## load the library required to intergrate R and Python
+library(reticulate)
+```
+
+```{python,comment=NA}
+
+## Load the python libraries
+from scipy.stats import ttest_1samp
+from scipy.stats import ttest_ind
+ 
+##ttest_1samp: used for carrying out one sample t-tests
+##ttest_ind: used for carrying out two sample independent t-tests
+
+
+```
+
+```{r ,comment=NA}
+
+## Generate a vector of values
+batch2009 <- c(567, 759, 1029, 400, 998, 936)
+batch2015 <-c(820, 960, 700, 545, 769, 1001)
+
+## Test for unequal variances
+var.test(batch2009,batch2015)#p-value = 0.3878, so we fail to reject the null hypothesis and conclude that the variances are approximately equal
+
+## Carry out the two sample t-test 
+t.test(batch2009,batch2015,alternative = "two.sided",var.equal = TRUE)
+
+
+```
+
+
+<h5>Execution in Python</h5>
+<br>
+```{python,comment=NA}
+
+## Generate a vector of values
+batch2009 = [567, 759, 1029, 400, 998, 936]
+batch2015 =[820, 960, 700, 545, 769, 1001]
+
+## Carry out the two sample t-test 
+ttest_ind(batch2009, batch2015, equal_var = True)
+
+```
+
+<center><strong><h4>Example 2</h4></strong></center>
+
+<p style="text-align:justify;"> Dr.Smith is teaching two sections of statistics, with 15 and 19 students respectively. The grades on an exam are as follows. </p> 
+<center>Section 1: 100,95,90,90,90,90,85,83,80,79,71,71,70,66,48</center>
+<center>Section 2: 100,100,100,100,98,98,98,93,93,90,86,83,81,79,79,76,61,48,41</center>
+
+<p style="text-align:justify;"> One of the classes asks if they did significantly better or worse on the exam than the other class. Using an alpha level= 0.10, what should Smith tell them?</p> 
+
+
+<h5>Calculations by hand</h5>
+<br>
+```{r ,comment=NA}
+
+knitr::include_graphics(paste0(path,"Example2ManualPage1.jpg"))
+knitr::include_graphics(paste0(path,"Example2ManualPage2.jpg"))
+```
+
+<h5>Execution in R</h5>
+<br>
+```{r ,comment=NA}
+
+## Generate a vector of values
+
+Section1 <- c(100,95,90,90,90,90,85,83,80,79,71,71,70,66,48)
+Section2 <- c(100,100,100,100,98,98,98,93,93,90,86,83,81,79,79,76,61,48,41)
+
+## Test for unequal variances
+var.test(Section1,Section2)#p-value = 0.308, so we fail to reject the null hypothesis and conclude that the variances are approximately equal
+
+## Carry out the two sample t-test
+t.test(Section1,Section2,alternative = "two.sided",var.equal = TRUE)
+
+```
+
+<h5>Execution in Python</h5>
+<br>
+```{python,comment=NA}
+## Generate a vector of values
+Section1 = [100,95,90,90,90,90,85,83,80,79,71,71,70,66,48]
+Section2 = [100,100,100,100,98,98,98,93,93,90,86,83,81,79,79,76,61,48,41]
+
+## Carry out the two sample t-test 
+ttest_ind(Section1, Section2, equal_var = True)
+```
+
+
+Additional Resources:
+
++ [Calculation of equality of variance](https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/hypothesis-testing/f-test/)
+
++ [Two Independent Samples Unequal Variance (Welch’s Test)](https://sites.nicholas.duke.edu/statsreview/means/welch/)
+<center><strong><h4>Example 1</h4></strong></center> 

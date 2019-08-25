@@ -1,0 +1,252 @@
+---
+title: <center><strong> "Classification and Regression Trees"</strong></center>
+author: <center><strong>[Shelmith Nyagathiri Kariuki](https://github.com/Shelmith-Kariuki)</strong></center>
+date: <center><strong>"August 8, 2019"</strong></center>
+output:
+  html_document:
+    toc_depth: '6'
+    toc: yes
+---
+
+The data used in this exercise has been obtained from the Financial Inclusion Competition hosted on [Zindi.africa](http://zindi.africa/competitions/financial-inclusion-in-africa)
+
+
+```{r setup, include=FALSE}
+
+
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+```
+
+## Install the libraries required
+
+```{r}
+## create a vector of packages to be installed
+pkgs <- c("dplyr","caret","randomForest")
+
+## Check if there are packages you want to load, that are not already installed. 
+miss_pkgs <- pkgs[!pkgs %in% installed.packages()[,1]] 
+
+## Installing the missing packages
+if(length(miss_pkgs)>0){
+  install.packages(miss_pkgs)
+}
+## Loading all the packages
+invisible(lapply(pkgs,library,character.only=TRUE))
+
+## Remove the objects that are no longer required
+rm(miss_pkgs)
+rm(pkgs)
+```
+
+## Read in the datasets
+
+```{r}
+
+data_path <- "/home/shelmith/Documents/Github/zuka/Datasets/FinancialInclusion"
+
+train_dat <- read.csv(paste(data_path, "Train_v2.csv",sep="/"))
+
+test_dat <- read.csv(paste(data_path, "Test_v2.csv",sep="/"))
+
+```
+
+## Check for missing values
+
+```{r, comment=NA}
+
+## train data
+apply(train_dat,2,function(x) sum(is.na(x)))
+
+## test data
+apply(test_dat,2,function(x) sum(is.na(x)))
+
+```
+
+
+## Drop the variables that we will not need
+
+```{r, comment=NA}
+
+## train data
+train <- train_dat %>% 
+  select(-uniqueid, -year)
+
+## test data
+test <- test_dat %>% 
+  select(-uniqueid, -year)
+
+```
+
+## Carry out anova tests to check whether there is a significant difference in ownership of a bank account among the different categories
+
+```{r, comment=NA}
+
+## Convert the bank_account into 0 and 1
+
+train$bank_account <-ifelse(train$bank_account == "Yes",1,0)
+
+## country
+summary(aov(bank_account~country, data = train))
+TukeyHSD(aov(bank_account~country, data = train))
+##summary(lm(bank_account~country, data = train))
+
+
+## location_type
+t.test(bank_account~location_type, data = train) ## Those in urban areas are more likely to own a bank account, as opposed to those in the rural areas 
+
+## cellphone_access
+t.test(bank_account~cellphone_access, data = train) ## Those with cellphones are more likely to own a bank account, as opposed to those without
+
+
+## household_size
+cor.test(train$household_size,train$bank_account, method = "spearm", alternative = "g")
+
+
+## age_of_respondent
+cor.test(train$age_of_respondent,train$bank_account, method = "spearm", alternative = "g")
+
+## gender_of_respondent
+t.test(bank_account~gender_of_respondent, data = train) ## Males are more likely to own a bank account, as opposed to females.
+
+## relationship_with_head
+summary(aov(bank_account~relationship_with_head, data = train))
+TukeyHSD(aov(bank_account~relationship_with_head, data = train))
+
+## marital_status
+
+summary(aov(bank_account~marital_status, data = train))
+TukeyHSD(aov(bank_account~marital_status, data = train))
+
+
+## education_level
+## No formal education, Other/Dont know/RTA -None
+
+train$education_level <- as.factor(ifelse(train$education_level %in% grep("formal|No",train$education_level,value = T, ignore.case = T),"None",as.character(train$education_level)))
+                         
+ test$education_level <- as.factor(ifelse(test$education_level %in% grep("formal|No",test$education_level,value = T, ignore.case = T),"None",as.character(test$education_level)))
+
+ 
+summary(aov(bank_account~education_level, data = train))
+TukeyHSD(aov(bank_account~education_level, data = train))
+
+## job_type
+
+## Collapse this variable into fewer categorical variables
+# Formally employed Private,Formally employed Government - Employed 
+# Self employed
+# Remittance Dependent,Government Dependent, Other Income - Other
+# Dont Know/Refuse to answer, No Income - None
+
+## train data
+train$job_type <- as.factor(ifelse(train$job_type %in% grep("Formally",train$job_type,value = T, ignore.case = T),"Employed",
+          ifelse(train$job_type %in% grep("Dependent|Other",train$job_type,value = T, ignore.case = T),"Other",
+        ifelse(train$job_type %in% grep("Dont Know/Refuse to answer|No Income",train$job_type,value = T, ignore.case = T),"None",as.character(train$job_type)))))
+
+
+## test data
+test$job_type <- as.factor(ifelse(test$job_type %in% grep("Formally",test$job_type,value = T, 
+                                                ignore.case = T),"Employed",
+          ifelse(test$job_type %in% grep("Dependent|Other",test$job_type,value = T, ignore.case = T),"Other",
+        ifelse(test$job_type %in% grep("Dont Know/Refuse to answer|No Income",test$job_type,value = T, ignore.case = T),"None",as.character(test$job_type)))))
+
+summary(aov(bank_account~job_type, data = train))
+TukeyHSD(aov(bank_account~job_type, data = train))
+
+```
+
+## Decision Tree
+
+```{r, comment=NA}
+trctrl <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
+set.seed(3333)
+dec.tree = train(bank_account ~ ., 
+                  data=train, 
+                  method="rpart",
+                  trControl = trctrl)
+dec.tree
+```
+
+```{r, comment=NA}
+
+train_pred <- predict(dec.tree, newdata = train)
+train_pred<- ifelse(train_pred<0.45,0,1)
+#confusionMatrix(train_pred, train$bank_account)
+
+confusionMatrix(table(train_pred, train$bank_account)) 
+```
+
+```{r, comment=NA}
+
+test_pred <- predict(dec.tree, newdata = test)
+test_pred<- ifelse(test_pred<0.45,0,1)
+
+test_dat$bank_account = test_pred
+
+test_sub <- test_dat %>% 
+  select(uniqueid, bank_account, country)
+
+test_sub$uniqueid <-paste(test_sub$uniqueid,"x",test_sub$country)
+
+## Read in submission file 
+
+sub_file <- read.csv(paste(data_path, "SubmissionFile.csv",sep="/"))
+sub_file$bank_account <- NULL
+test_sub <-inner_join(sub_file, test_sub,by = "uniqueid")
+
+write.csv(test_sub, paste(data_path, "test_sub1.csv",sep="/"),row.names = FALSE) #Leaderboard position 69, with a value of 0.137418203
+```
+
+## Bagging: Random Forest
+
+```{r, comment=NA}
+apply(train,2,function(x) sum(is.na(x)))
+
+# Fitting model
+fit <- randomForest(bank_account ~ ., data=train ,ntree=500)
+summary(fit)
+
+#Predict Output 
+predicted= predict(fit,train)
+
+
+train_pred <- predict(fit, newdata = train)
+train_pred<- ifelse(train_pred<0.45,0,1)
+#confusionMatrix(train_pred, train$bank_account)
+
+confusionMatrix(table(train_pred, train$bank_account)) 
+
+
+```
+
+
+```{r, comment=NA}
+
+
+test_pred <- predict(fit, newdata = test)
+test_pred<- ifelse(test_pred<0.45,0,1)
+
+test_dat$bank_account = test_pred
+
+test_sub <- test_dat %>% 
+  select(uniqueid, bank_account, country)
+
+#test_sub$uniqueid <-paste(test_sub$uniqueid,"x",test_sub$country)
+
+## Read in submission file 
+
+sub_file <- read.csv(paste(data_path, "SubmissionFile.csv",sep="/"))
+sub_file$bank_account <- NULL
+sub_file$X.1 <- NULL
+
+names(sub_file) = c("uniqueid","country")
+test_sub <-inner_join(sub_file, test_sub,by = c("uniqueid","country"))
+test_sub$uniqueid <-paste(test_sub$uniqueid,"x",test_sub$country)
+sub_file$country <- NULL
+
+
+write.csv(test_sub, paste(data_path, "test_sub2.csv",sep="/"),row.names = FALSE) 
+
+```
+
+
+## Boosting: Gradient Boosting Model (GBM)
